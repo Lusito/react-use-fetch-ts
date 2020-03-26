@@ -1,6 +1,6 @@
 {
     "name": "react-use-fetch-ts",
-    "version": "0.8.1",
+    "version": "0.8.2",
     "description": "A lightweight fetching hook for react, written in TypeScript",
     "keywords": [
         "TypeScript",
@@ -11,13 +11,13 @@
     ],
     "author": "Santo Pfingsten",
     "license": "Zlib",
-    "homepage": "https://github.com/Lusito/react-use-event-source-ts",
+    "homepage": "https://github.com/Lusito/react-use-fetch-ts",
     "bugs": {
-        "url": "https://github.com/Lusito/react-use-event-source-ts/issues"
+        "url": "https://github.com/Lusito/react-use-fetch-ts/issues"
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/Lusito/react-use-event-source-ts.git"
+        "url": "https://github.com/Lusito/react-use-fetch-ts.git"
     },
     "files": [
         "dist/"
