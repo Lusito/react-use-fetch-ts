@@ -3,19 +3,19 @@ import { useState, useCallback, useRef, useLayoutEffect } from "react";
 export * from "./defaults";
 
 export interface FetchState<TError, TResult> {
-    // Request is currently in progress
+    /** Request is currently in progress */
     loading?: boolean;
-    // Request has finished successfully and the result is stored in the result attribute
+    /** Request has finished successfully and the result is stored in the result attribute */
     success?: boolean;
-    // Request has finished with either an error or an exception.
+    /** Request has finished with either an error or an exception. */
     error?: boolean;
-    // The status code of the response (if no exception has been thrown)
+    /** The status code of the response (if no exception has been thrown) */
     responseStatus?: number;
-    // The response of the server as JSON in case of success
+    /** The response of the server as JSON in case of success */
     result?: TResult;
-    // The response of the server as JSON in case of error
+    /** The response of the server as JSON in case of error */
     errorResult?: TError;
-    // If an exception has been thrown, this will contain the error
+    /** If an exception has been thrown, this will contain the error */
     cause?: Error;
 }
 
