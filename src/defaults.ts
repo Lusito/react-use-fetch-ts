@@ -2,8 +2,8 @@ export const defaultGetInit: RequestInit = {
     method: "GET",
     credentials: "include",
     headers: {
-        Accept: "application/json"
-    }
+        Accept: "application/json",
+    },
 };
 
 export const defaultPostInit: RequestInit = {
@@ -11,16 +11,16 @@ export const defaultPostInit: RequestInit = {
     credentials: "include",
     headers: {
         Accept: "application/json",
-        "Content-Type": "application/x-www-form-urlencoded"
-    }
+        "Content-Type": "application/x-www-form-urlencoded",
+    },
 };
 
 export const defaultFormDataPostInit: RequestInit = {
     method: "POST",
     credentials: "include",
     headers: {
-        Accept: "application/json"
-    }
+        Accept: "application/json",
+    },
 };
 
 export function initFormPost(formData: FormData): RequestInit {
@@ -28,11 +28,11 @@ export function initFormPost(formData: FormData): RequestInit {
     if (entries.some((entry) => entry[1] instanceof File)) {
         return {
             ...defaultFormDataPostInit,
-            body: formData
+            body: formData,
         };
     }
     return {
         ...defaultPostInit,
-        body: entries.map(([key, value]) => `${key}=${encodeURIComponent(value.toString())}`).join("&")
+        body: entries.map(([key, value]) => `${key}=${encodeURIComponent(value.toString())}`).join("&"),
     };
 }
