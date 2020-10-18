@@ -11,6 +11,8 @@ export interface FetchState<TError, TResult> {
     error?: boolean;
     /** The status code of the response (if no exception has been thrown) */
     responseStatus?: number;
+    /** The headers of the response (if no exception has been thrown) */
+    responseHeaders?: Headers;
     /** The response of the server as JSON in case of success */
     result?: TResult;
     /** The response of the server as JSON in case of error */
@@ -26,8 +28,8 @@ export interface FetchConfig<TResult, TError, TPrepare extends (...args: any[]) 
     prepare: TPrepare;
     getResult: (json: any) => TResult;
     getError: (json: any) => TError;
-    onSuccess?(result: TResult, status: number): void;
-    onError?(errorResult: TError, status: number): void;
+    onSuccess?(result: TResult, status: number, responseHeaders: Headers): void;
+    onError?(errorResult: TError, status: number, responseHeaders: Headers): void;
     onException?(error: Error): void;
 }
 
@@ -76,12 +78,12 @@ export function useFetch<TResult, TError, TPrepare extends (...args: any[]) => F
 
             if (response.ok) {
                 const result: TResult = config.getResult(await response.json());
-                if (config.onSuccess) config.onSuccess(result, responseStatus);
-                setState({ success: true, responseStatus: response.status, result });
+                if (config.onSuccess) config.onSuccess(result, responseStatus, response.headers);
+                setState({ success: true, responseStatus: response.status, responseHeaders: response.headers, result });
             } else {
                 const errorResult: TError = config.getError(await response.json());
-                if (config.onError) config.onError(errorResult, responseStatus);
-                setState({ error: true, responseStatus: response.status, errorResult });
+                if (config.onError) config.onError(errorResult, responseStatus, response.headers);
+                setState({ error: true, responseStatus: response.status, responseHeaders: response.headers, errorResult });
             }
         } catch (error) {
             if (error.name !== "AbortError") {

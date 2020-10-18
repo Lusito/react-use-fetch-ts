@@ -153,11 +153,11 @@ If you want to act upon success/error/exception when they happen, you can do it 
 function UserComponent(props: { id: number }) {
     const [getUser] = useFetch({
         ...getUserConfig,
-        onSuccess(result: UserDTO, status: number) {
-            console.log('success', result, status);
+        onSuccess(result: UserDTO, status: number, responseHeaders: Headers) {
+            console.log('success', result, status, responseHeaders);
         },
-        onError(errorResult: TError, status: number) {
-            console.log('error', errorResult, status);
+        onError(errorResult: TError, status: number, responseHeaders: Headers) {
+            console.log('error', errorResult, status, responseHeaders);
         },
         onException(error: Error) {
             console.log('exception', error);
@@ -206,6 +206,8 @@ export interface FetchState<TError, TResult> {
     error?: boolean;
     // The status code of the response (if no exception has been thrown)
     responseStatus?: number;
+    /** The headers of the response (if no exception has been thrown) */
+    responseHeaders?: Headers;
     // The response of the server as JSON in case of success
     result?: TResult;
     // The response of the server as JSON in case of error
