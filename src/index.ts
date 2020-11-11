@@ -94,6 +94,7 @@ export function useFetch<TResult, TError, TPrepare extends (...args: any[]) => F
         }
     }, []);
     useLayoutEffect(() => {
+        mounted.current = true;
         params && submit(...params);
         return () => {
             mounted.current = false;
