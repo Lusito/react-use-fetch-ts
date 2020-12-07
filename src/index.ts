@@ -25,6 +25,7 @@ export type FetchParams = Parameters<typeof fetch>;
 export type SetState<TError, TResult> = (state: FetchState<TError, TResult>) => void;
 
 export interface FetchConfig<TResult, TError, TPrepare extends (...args: any[]) => FetchParams> {
+    resultAsJSON?: boolean;
     prepare: TPrepare;
     getResult: (json: any) => TResult;
     getError: (json: any) => TError;
@@ -76,14 +77,20 @@ export function useFetch<TResult, TError, TPrepare extends (...args: any[]) => F
 
             responseStatus = response.status;
 
+            const resultData = await (config.resultAsJSON !== false ? response.json() : response.text());
             if (response.ok) {
-                const result: TResult = config.getResult(await response.json());
+                const result: TResult = config.getResult(resultData);
                 if (config.onSuccess) config.onSuccess(result, responseStatus, response.headers);
                 setState({ success: true, responseStatus: response.status, responseHeaders: response.headers, result });
             } else {
-                const errorResult: TError = config.getError(await response.json());
+                const errorResult: TError = config.getError(resultData);
                 if (config.onError) config.onError(errorResult, responseStatus, response.headers);
-                setState({ error: true, responseStatus: response.status, responseHeaders: response.headers, errorResult });
+                setState({
+                    error: true,
+                    responseStatus: response.status,
+                    responseHeaders: response.headers,
+                    errorResult,
+                });
             }
         } catch (error) {
             if (error.name !== "AbortError") {
