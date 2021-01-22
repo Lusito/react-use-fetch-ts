@@ -6,9 +6,9 @@
 [![Stars](https://badgen.net/github/stars/lusito/react-use-fetch-ts)](https://github.com/lusito/react-use-fetch-ts)
 [![Watchers](https://badgen.net/github/watchers/lusito/react-use-fetch-ts)](https://github.com/lusito/react-use-fetch-ts)
 
-A lightweight fetching hook for react, written in TypeScript.
+Lightweight fetching hooks for react, written in TypeScript.
 
-#### Why use this hook?
+#### Why use this hook creator?
 
 - Very lightweight (see the badges above for the latest size).
 - Flexible and dead simple to use.
@@ -31,90 +31,105 @@ This library is shipped as es2017 modules. To use them in browsers, you'll have 
 
 #### A simple get
 
-Let's say you have a user object you want to fetch. First you'll need to create a config object.
+Let's say you have a user object you want to fetch. First you'll create a custom hook to perform the fetch:
 
 ```tsx
-import { initFormPost, fetchConfig } from "react-use-fetch-ts";
+import { createFetchHook, prepareGet } from "react-use-fetch-ts";
 
-export const getUserConfig = fetchConfig({
-    prepare: (id: number) => [`api/user${id}`, defaultGetInit],
-    getResult: (json: any) => json as UserDTO,
-    getError: (json: any) => json as RestValidationErrorDTO
+export const useGetUser = createFetchHook({
+    prepare: (init: FetchRequestInit, data: { id: number }) => {
+        prepareGet(init);
+        return `api/user${data.id}`
+    },
+    getResult: (response: Response) => response.json() as Promise<UserDTO>,
+    getError: (response: Response) => response.json() as Promise<RestValidationErrorDTO>
 });
 ```
 
-- `fetchConfig` helps to define the types involved in a request. See further below for more details.
-- `defaultGetInit` is a pre-baked object for use in a get request. See further below for more details.
+- `createFetchHook` creates a hook for you. See further below for more details.
+- `prepareGet` is a helper to prepare the init object for a GET request. See further below for more details.
 
-Now you can start using the `useFetch` hook:
-
+Now you can start using your new `useGetUser` hook:
 
 ```tsx
-import { useFetch } from "react-use-fetch-ts";
-
-import { getUserConfig } from "./fetch-configs/user";
+import { useGetUser } from "./fetch/user";
 
 function UserComponent(props: { id: number }) {
-    const [getUser] = useFetch(getUserConfig, [props.id]);
+    const [getUser] = useGetUser({ autoSubmit: { id: props.id });
 
-    if (getUser.error) return <div>Error fetching user</div>;
-    if (getUser.loading) return <div>Loading..</div>;
+    if (getUser.failed) return <div>Error fetching user</div>;
+    if (!getUser.success) return <div>Loading..</div>;
 
-    const user = getUser.result;
+    const user = getUser.data;
 
     return <div>{user.name}</div>;
 }
 ```
 
-- `useFetch` can take one or two parameters.
-  - The first is the config object you specified above.
-  - If you specify a second parameter, the fetch will be started instantly without a manual trigger
-    - The second parameter is an array containing all the arguments you would pass to the `prepare` function of your config object.
-- `useFetch` returns an array containing 3 items:
-  - The first entry is the current state of the fetch request, containing the results or error when it's done. See further below for more details.
+- `useGetUser` can take an optional config object. See further below for details.
+- The hook returns an array containing 3 items (see further below for the other items):
+  - The first entry is the current state of the fetch request, containing the result or error data when it's done. See further below for more details.
 
 
 #### A PUT request
 
 Let's say you have a form to submit updates on a user object.
 
-Again, we'll need to create a config object. This time it will take a FormData object in addition to the id.
+Again, we'll need to create an initializer object. This time it will take a FormData object in addition to the id.
 
 ```tsx
-import { initFormPost, fetchConfig } from "react-use-fetch-ts";
+import { setupFetch, preparePost } from "react-use-fetch-ts";
 
-export const updateUserConfig = fetchConfig({
-    prepare: (id: number, formData: FormData) => [
-        `api/user${id}`,
-        {
-            ...initFormPost(formData),
-            method: "PUT"
-        }
-    ],
-    getResult: (json: any) => json as boolean,
-    getError: (json: any) => json as RestValidationErrorDTO
+export const useUpdateUser = createFetchHook({
+    prepare: (init: FetchRequestInit, data: { id: number, formData: FormData }) => {
+        prepareFormDataPost(init, data.formData);
+        init.method = "PUT";
+        return `api/user${data.id}`;
+    },
+    getResult: (response: Response) => response.json() as Promise<boolean>,
+    getError: (response: Response) => response.json() as Promise<RestValidationErrorDTO>
 });
 ```
 
-- `initFormPost` is a helper method, which will create a form-data POST from a FormData object. See further below for more details.
-- Additionally, since `initFormPost` sets the property `method` to "POST", we override this here with a "PUT".
-- In this case, we expect the server to return `true` on success.
+- `prepareFormDataPost` is a helper method, which will prepare the init object with a FormData object. See further below for more details.
+- Additionally, since `prepareFormDataPost` sets the property `method` to "POST", we override this here with a "PUT".
+- In this case, we expect the server to return `true` on success, so the result type is `boolean`.
 - Aside from that there is nothing special going on here.
 
 ```tsx
+
+interface ErrorMessageForStateProps {
+    state: FetchState<any, RestValidationErrorDTO>;
+}
+
+export const ErrorMessageForState = ({ state }: ErrorMessageForStateProps) => {
+    switch (state.state) {
+        case "error":
+            return <div>Error {state.error.error}</div>;
+        case "exception":
+            return <div>Error {state.error.message}</div>;
+        default:
+            return null;
+    }
+};
+
+export const getValidationErrors = (state: FetchState<any, RestValidationErrorDTO>) =>
+    (state.state === "error" && state.error.validation_errors) || {};
+
+
 function EditUserComponent(props: { id: number }) {
-    const [getUser] = useFetch(getUserConfig, [props.id]);
-    const [updateUser, submitUpdateUser] = useFetch(updateUserConfig);
+    const [getUser] = useGetUser({ autoSubmit: { id: props.id } });
+    const [updateUser, submitUpdateUser] = useUpdateUserFetch();
 
-    if (getUser.error) return <div>Error fetching user</div>;
-    if (getUser.loading) return <div>Loading..</div>;
+    if (getUser.failed) return <div>Error fetching user</div>;
+    if (!getUser.success) return <div>Loading..</div>;
 
-    const user = getUser.result;
-    const validationErrors = updateUser.errorResult?.validation_errors || {};
+    const user = getUser.data;
+    const validationErrors = getValidationErrors(updateUser);
 
     return (
         <Form
-            onSubmit={(e) => submitUpdateUser(props.id, new FormData(e.currentTarget))}
+            onSubmit={(e) => submitUpdateUser({ id: props.id, formData: new FormData(e.currentTarget) })}
             loading={updateUser.loading}
         >
             <Input
@@ -125,9 +140,7 @@ function EditUserComponent(props: { id: number }) {
                 defaultValue={user.name}
             />
             ...
-            {updateUser.error && (
-                <div>Error: {updateUser.errorResult?.error || updateUser.cause?.message || "Unknown Error"}</div>
-            )}
+            <ErrorMessageForState state={updateUser} />
             <button type="submit">Save</button>
         </Form>
     );
@@ -137,11 +150,11 @@ function EditUserComponent(props: { id: number }) {
 There's a lot more going on here:
 
 - In addition to getting the user, which we already did in the first example,
-- We're also using `useFetch` with the `updateUserConfig` object. No second argument means we need to call it manually.
+- We're also using the `useUpdateUserFetch` hook. No `autoSubmit` config means we need to call it manually.
   - The second entry in the returned array is a submit function, which you can call to manually (re-)submit the request.
 - We're getting a validation hashmap from the errorResult in case there has been a server-side error. The server obviously needs to supply this.
 - We're using some pseudo UI library to define our user form:
-  - onSubmit is just passed on to the `<form>` element, so we only get notified of the submit.
+  - onSubmit is passed on to the `<form>` element, so we get notified of submits.
     - On submit, we create a new FormData object from the `<form>` element.
     - The biggest advantage of this is that you don't need to connect all of your input elements to your components state.
   - When an error happened, we try to show some information about it. See further below for more information on the state values.
@@ -151,8 +164,7 @@ There's a lot more going on here:
 If you want to act upon success/error/exception when they happen, you can do it like this:
 ```tsx
 function UserComponent(props: { id: number }) {
-    const [getUser] = useFetch({
-        ...getUserConfig,
+    const [getUser] = useGetUser({
         onSuccess(result: UserDTO, status: number, responseHeaders: Headers) {
             console.log('success', result, status, responseHeaders);
         },
@@ -162,73 +174,114 @@ function UserComponent(props: { id: number }) {
         onException(error: Error) {
             console.log('exception', error);
         },
-    }, [props.id]);
+        autoSubmit: { id: data.id },
+    });
     // ...
 }
 ```
 
 ### API
 
-#### fetchConfig
+#### createFetchHook
 
-- `fetchConfig` essentially only returns what's being passed in, but adds types required for `useFetch`.
+- `createFetchHook` creates a type-safe hook that you can use to perform the fetch.
 - it takes an object with 3 attributes:
-  - `prepare` is a function used to get the parameters you would pass to a fetch call.
-    - its parameters are up to you
-    - it returns an array which specify the arguments passed to `fetch`.
-  - `getResult` is a function called to convert the returned json to a type-safe version.
+  - `prepare` is a function used to prepare the init object you would pass to a fetch call.
+    - the first parameter is the init object you can modify.
+    - its (optional) second parameter can be an object of your liking
+    - the return value should be the URL you want to run this fetch against.
+  - `getResult` is a function called to get the result of a response to a type-safe version. Always add a `as Promise<MyType>` at the end to define your type.
   - `getError` is essentially the same, but for the case where `response.ok === false`. I.e. you can have a different type for non-ok responses.
 
 
-#### useFetch
+#### Your Custom Hook
 
-- `useFetch` can take one or two parameters.
-  - The first is a configuration object created via `fetchConfig`.
-    - You can extend this object with callback functions here (`onSuccess`, `onError` and `onException`)
-  - If you specify a second parameter, the fetch will be started instantly without a manual trigger
-    - The second parameter is an array containing all the arguments you would pass to the `prepare` function of your config object.
+- The hook created by `createFetchHook` can an optional config parameter with these optional properties:
+  - One or more of these callbacks: `onInit`, `onSuccess`, `onError`, `onException`
+  - A parameter autoSubmit, which can be used to automatically submit the request on component mount
+    - Set this to true if your `prepare` function does not take a data parameter
+    - Or set this to the data object your `prepare` function will receive
 - `useFetch` returns an array containing 3 items:
-  - The first entry is the current state of the fetch request, containing the results or error when it's done. See below for more details.
+  - The first entry is the current state of the fetch request, containing the result or error data when it's done. See below for more details.
   - The second entry is a submit function, which you can call to manually (re-)submit the request.
   - The third entry is an abort function to cancel the active request.
 
 #### FetchState
 
-The first entry of the array returned by `useFetch` is a state object:
+The first entry of the array returned by your custom hook is a state object. Depending on the state's status, it can have different properties:
 
 ```tsx
-export interface FetchState<TError, TResult> {
-    // Request is currently in progress
-    loading?: boolean;
-    // Request has finished successfully and the result is stored in the result attribute
-    success?: boolean;
-    // Request has finished with either an error or an exception.
-    error?: boolean;
-    // The status code of the response (if no exception has been thrown)
-    responseStatus?: number;
-    /** The headers of the response (if no exception has been thrown) */
-    responseHeaders?: Headers;
-    // The response of the server as JSON in case of success
-    result?: TResult;
-    // The response of the server as JSON in case of error
-    errorResult?: TError;
-    // If an exception has been thrown, this will contain the error
-    cause?: Error;
+export interface FetchStateBase {
+    /** Request is currently in progress */
+    loading: boolean;
+    /** Either an exception occurred or the request returned an error */
+    failed: boolean;
+    /** Request was successful */
+    success: boolean;
 }
+
+export interface FetchStateEmpty extends FetchStateBase {
+    state: "empty";
+    failed: false;
+    success: false;
+}
+
+export interface FetchStateDone extends FetchStateBase {
+    /** The status code of the response */
+    responseStatus: number;
+    /** The headers of the response */
+    responseHeaders: Headers;
+}
+
+export interface FetchStateDoneSuccess<TData> extends FetchStateDone {
+    failed: false;
+    success: true;
+    /** Data is present */
+    state: "success";
+    /** The response data in case of success */
+    data: TData;
+}
+
+export interface FetchStateDoneError<TError extends Record<string, any>> extends FetchStateDone {
+    failed: true;
+    success: false;
+    /** Errors is present */
+    state: "error";
+    /** The server result data. */
+    error: TError;
+}
+
+export interface FetchStateDoneException extends FetchStateBase {
+    failed: true;
+    success: false;
+    /** Errors is present */
+    state: "exception";
+    /** The cause of the exception. */
+    error: Error;
+}
+
+export type FetchState<TData, TError extends Record<string, any>> =
+    | FetchStateEmpty
+    | FetchStateDoneSuccess<TData>
+    | FetchStateDoneError<TError>
+    | FetchStateDoneException;
 ```
 
-#### Prepared RequestInit objects
+As you can see, you will only be able to access `state.data` if you checked for `state.success` or `state.state === "success"` (or if you ruled out the other possibilities first)
 
-In these objects `credentials` is always set to "include" and a header `Accept` has been set to "application/json"
+#### Helper Functions
 
-- `defaultGetInit` prepares a GET request
-- `defaultPostInit` prepares a form url-encoded POST request
-- `defaultFormDataPostInit` prepares a form-data POST request.
-- `initFormPost` is a method, which takes a `FormData` object and detects if it contains files.
-  - if it contains files, `defaultFormDataPostInit` will be used in combination with a matching body attribute
-  - otherwise `defaultPostInit` will be used in combination with a matching body attribute
+The following functions will initialize the `RequestInit` object for specific use-cases.
+They will all set`credentials` `"include"` and a header `Accept` with value `"application/json"`
 
-### Report isssues
+- `prepareGet` prepares a GET request
+- `preparePost` prepares a form-data POST request.
+- `preparePostUrlEncoded` prepares a form url-encoded POST request
+- `prepareFormDataPost` prepares a POST request with a `FormData` object and detects if it contains files.
+  - if it contains files, it will call `preparePost` and set the body to the formData object.
+  - otherwise `preparePostUrlEncoded` will be called and the properties of the formData will be set accordingly.
+
+### Report issues
 
 Something not working quite as expected? Do you need a feature that has not been implemented yet? Check the [issue tracker](https://github.com/Lusito/react-use-fetch-ts/issues) and add a new one if your problem is not already listed. Please try to provide a detailed description of your problem, including the steps to reproduce it.
 
