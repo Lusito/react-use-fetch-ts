@@ -1,4 +1,8 @@
-# react-use-fetch-ts
+# Deprecated
+
+**WARNING:** This project has moved to [@react-nano/use-fetch](https://github.com/lusito/react-nano)
+
+## react-use-fetch-ts
 
 [![Minified + gzipped size](https://badgen.net/bundlephobia/minzip/react-use-fetch-ts)](https://www.npmjs.com/package/react-use-fetch-ts)
 [![NPM version](https://badgen.net/npm/v/react-use-fetch-ts)](https://www.npmjs.com/package/react-use-fetch-ts)
